@@ -3,10 +3,10 @@ import Layout from "../layouts/Layout.astro";
 ---
 
 <Layout title="Welcome to Astro.">
-	<head>
-		<script is:inline src="/assets/ffmpeg/package/dist/umd/ffmpeg.js"></script>
-		<script is:inline src="/assets/util/package/dist/umd/index.js"></script>
-	</head>
+  <head>
+    <script is:inline src="/assets/ffmpeg/package/dist/umd/ffmpeg.js"></script>
+    <script is:inline src="/assets/util/package/dist/umd/index.js"></script>
+  </head>
   <main>
     <header>
       <h1>Git Gif</h1>
@@ -14,57 +14,54 @@ import Layout from "../layouts/Layout.astro";
         Submit a video to convert it to a gif ready for you to upload to GitHub.
       </p>
     </header>
-    <div class="options">
-      <section>
-        <h2>Options</h2>
-		<div class="slider">
-        <label for="width">
-          Output width
-        </label>
-          <input
-            id="width"
-            type="range"
-            min="100"
-            max="1080"
-            value="800"
-            step="20"
-          />
-          <span id="widthOutput"></span>
-		</div>
-		<div class="slider">
-        <label for="framerate">
-          Output framerate
-        </label>
-          <input
-            id="framerate"
-            type="range"
-            min="10"
-            max="30"
-            value="22"
-            step="1"
-          />
-          <span id="framerateOutput"></span>
-		</div>
-      </section>
-    </div>
-    <div class="content">
-      <section>
-        <h2>Upload</h2>
+    <section>
+      <h2>Options</h2>
+      <div class="sliders">
+        <label for="width"> Output width </label>
+        <input
+          id="width"
+          type="range"
+          min="100"
+          max="1080"
+          value="800"
+          step="20"
+        />
+        <span id="widthOutput"></span>
+        <label for="framerate"> Output framerate </label>
+        <input
+          id="framerate"
+          type="range"
+          min="10"
+          max="30"
+          value="22"
+          step="1"
+        />
+        <span id="framerateOutput"></span>
+      </div>
+    </section>
+    <section>
+      <h2>Upload</h2>
+      <div id="upload-area">
         <p>Drag a video file here for it to be processed.</p>
         <input type="file" id="uploader" />
-      </section>
-      <section>
-        <h2>Output</h2>
-		<p id="message"></p>
-		<img id="output-img"/>
-      </section>
-    </div>
+      </div>
+      <div class="hide" id="progress-message">
+        <p id="message">We're just warming up the converter</p>
+        <label for="file">Conversion:</label>
+        <progress id="file" value="0" max="100">0%</progress>
+      </div>
+    </section>
   </main>
+  <dialog id="output">
+    <h2>Here's your gif!</h2>
+    <img id="output-img" />
+  </dialog>
 </Layout>
 
 <style>
   main {
     padding: 1rem;
+    margin: auto;
     width: 800px;
     max-width: calc(100% - 2rem);
     color: white;
@@ -76,9 +73,16 @@ import Layout from "../layouts/Layout.astro";
 
   section {
     border: 1px white solid;
+    padding: 2rem;
     h2 {
       text-align: center;
       margin: 0 2rem;
+    }
+    &:first-of-type {
+      border-radius: 1rem 1rem 0 0;
+    }
+    &:last-of-type {
+      border-radius: 0 0 1rem 1rem;
     }
   }
   .content {
@@ -90,60 +94,92 @@ import Layout from "../layouts/Layout.astro";
     }
   }
 
-  .slider {
-	display: grid;
-	grid-template-columns: auto 4fr 1fr;
-	align-items: center;
-	gap: 0.5rem;
+  .sliders {
+    display: grid;
+    grid-template-columns: auto 4fr 1fr;
+    align-items: center;
+    gap: 0.5rem;
+    span {
+      text-align: end;
+    }
+  }
+  dialog {
+    border-radius: 2rem;
+    flex-direction: column;
+    max-width: calc(100% - 8rem);
+    img {
+      max-width: 100%;
+    }
+  }
+
+  .hide {
+    display: none;
   }
 </style>
 <script type="module" is:inline>
-import { FFmpeg } from "/assets/ffmpeg/package/dist/esm/index.js";
-import { fetchFile } from "/assets/util/package/dist/esm/index.js";
+  import { FFmpeg } from "/assets/ffmpeg/package/dist/esm/index.js";
+  import { fetchFile } from "/assets/util/package/dist/esm/index.js";
   const attachValueToText = (textId, inputId) => {
-  const widthOutput = document.querySelector(textId);
-  const widthInput = document.querySelector(inputId);
-  widthOutput.textContent = widthInput.value;
-  widthInput.addEventListener("input", (event) => {
-    const target = event.target;
-    if ("value" in target && typeof target.value === "string") {
-      widthOutput.textContent = target.value;
+    const widthOutput = document.querySelector(textId);
+    const widthInput = document.querySelector(inputId);
+    widthOutput.textContent = widthInput.value;
+    widthInput.addEventListener("input", (event) => {
+      const target = event.target;
+      if ("value" in target && typeof target.value === "string") {
+        widthOutput.textContent = target.value;
+      }
+    });
+  };
+
+  attachValueToText("#widthOutput", "#width");
+  attachValueToText("#framerateOutput", "#framerate");
+
+  let ffmpeg = null;
+
+  const transcode = async ({ target: { files } }) => {
+    const width = document.getElementById("width").value;
+    const framerate = document.getElementById("framerate").value;
+    const message = document.getElementById("message");
+    const progressBar = document.getElementById("file");
+    const progressMessage = document.getElementById("progress-message");
+    const uploadArea = document.getElementById("upload-area");
+    if (ffmpeg === null) {
+      ffmpeg = new FFmpeg();
+      ffmpeg.on("log", ({ message }) => {
+        console.log(message);
+      });
+      ffmpeg.on("progress", ({ progress }) => {
+        message.innerHTML = `${progress * 100} %`;
+        progressBar.value = progress * 100;
+        progressBar.innerHTML = `${progress * 100} %`;
+      });
+      await ffmpeg.load({
+        coreURL: "/assets/core/package/dist/esm/ffmpeg-core.js",
+      });
     }
-  });
+    const { name } = files[0];
+    await ffmpeg.writeFile(name, await fetchFile(files[0]));
+    progressMessage.classList.remove("hide");
+    uploadArea.classList.add("hide");
+    await ffmpeg.exec([
+      "-i",
+      name,
+      "-vf",
+      `fps=${framerate},scale=${width}:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse`,
+      "output.gif",
+    ]);
+    message.innerHTML = "Complete transcoding";
+    progressMessage.classList.add("hide");
+    uploadArea.classList.remove("hide");
+    const data = await ffmpeg.readFile("output.gif");
 
-	}
-
-	attachValueToText("#widthOutput", "#width")
-	attachValueToText("#framerateOutput", "#framerate")
-
-	let ffmpeg = null;
-
-	const transcode = async ({ target: { files } }) => {
-  	  const width = document.querySelector("#width").value;
-  	  const framerate = document.querySelector("#framerate").value;
-	  const message = document.getElementById('message');
-	  if (ffmpeg === null) {
-		ffmpeg = new FFmpeg();
-		ffmpeg.on("log", ({ message }) => {
-		  console.log(message);
-		})
-		ffmpeg.on("progress", ({ progress }) => {
-		  message.innerHTML = `${progress * 100} %`;
-		});
-		await ffmpeg.load({
-		  coreURL: "/assets/core/package/dist/esm/ffmpeg-core.js",
-		});
-	  }
-	  const { name } = files[0];
-	  await ffmpeg.writeFile(name, await fetchFile(files[0]));
-	  message.innerHTML = 'Start transcoding';
-	  await ffmpeg.exec(['-i', name, "-vf", `fps=${framerate},scale=${width}:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse`, 'output.gif']);
-	  message.innerHTML = 'Complete transcoding';
-	  const data = await ffmpeg.readFile('output.gif');
-
-	  const image = document.getElementById('output-img');
-	  image.src = URL.createObjectURL(new Blob([data.buffer], { type: 'image/gif' }));
-	}
-	const elm = document.getElementById('uploader');
-	elm.addEventListener('change', transcode);
+    const image = document.getElementById("output-img");
+    image.src = URL.createObjectURL(
+      new Blob([data.buffer], { type: "image/gif" })
+    );
+    const modal = document.getElementById("output");
+    modal.showModal();
+  };
+  const elm = document.getElementById("uploader");
+  elm.addEventListener("change", transcode);
 </script>
