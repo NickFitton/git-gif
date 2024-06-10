@@ -4,8 +4,8 @@ import Layout from "../layouts/Layout.astro";
 
 <Layout title="Welcome to Astro.">
 	<head>
-		<script is:inline src="/ffmpeg/package/dist/umd/ffmpeg.js"></script>
-		<script is:inline src="/util/package/dist/umd/index.js"></script>
+		<script is:inline src="/assets/ffmpeg/package/dist/umd/ffmpeg.js"></script>
+		<script is:inline src="/assets/util/package/dist/umd/index.js"></script>
 	</head>
   <main>
     <header>
@@ -97,7 +97,7 @@ import Layout from "../layouts/Layout.astro";
 	gap: 0.5rem;
   }
 </style>
-<script type="module">
+<script type="module" is:inline>
 import { FFmpeg } from "/assets/ffmpeg/package/dist/esm/index.js";
 import { fetchFile } from "/assets/util/package/dist/esm/index.js";
   const attachValueToText = (textId, inputId) => {
