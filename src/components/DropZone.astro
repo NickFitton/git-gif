@@ -1,0 +1,130 @@
+---
+// DropZone component for drag-and-drop video file selection
+---
+
+<div
+  id="drop-zone"
+  class="border-2 border-dashed border-gray-600 rounded-lg p-12 text-center cursor-pointer transition-colors hover:border-gray-500 hover:bg-gray-800/50"
+>
+  <div class="space-y-4">
+    <div class="text-5xl">🎬</div>
+    <div>
+      <p class="text-lg font-medium text-gray-200">Drop your video here</p>
+      <p class="text-sm text-gray-400 mt-1">or click to browse</p>
+    </div>
+    <p class="text-xs text-gray-500">Supports MP4, WebM, MOV, AVI, MKV</p>
+  </div>
+  <input
+    type="file"
+    id="file-input"
+    accept="video/*,.mp4,.webm,.mov,.avi,.mkv"
+    class="hidden"
+  />
+</div>
+
+<!-- Selected file info (shown after file selection) -->
+<div id="file-info" class="hidden mt-4 p-4 bg-gray-800 rounded-lg">
+  <div class="flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <span class="text-2xl">📹</span>
+      <div>
+        <p id="file-name" class="font-medium text-gray-200"></p>
+        <p id="file-size" class="text-sm text-gray-400"></p>
+      </div>
+    </div>
+    <button
+      id="clear-file"
+      class="text-gray-400 hover:text-white transition-colors p-2"
+      title="Remove file"
+    >
+      ✕
+    </button>
+  </div>
+</div>
+
+<script>
+  const VALID_TYPES = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska'];
+  const VALID_EXTENSIONS = ['.mp4', '.webm', '.mov', '.avi', '.mkv'];
+
+  const dropZone = document.getElementById('drop-zone') as HTMLDivElement;
+  const fileInput = document.getElementById('file-input') as HTMLInputElement;
+  const fileInfo = document.getElementById('file-info') as HTMLDivElement;
+  const fileName = document.getElementById('file-name') as HTMLParagraphElement;
+  const fileSize = document.getElementById('file-size') as HTMLParagraphElement;
+  const clearFile = document.getElementById('clear-file') as HTMLButtonElement;
+
+  let selectedFile: File | null = null;
+
+  function isValidVideo(file: File): boolean {
+    if (VALID_TYPES.includes(file.type)) return true;
+    const ext = '.' + file.name.split('.').pop()?.toLowerCase();
+    return VALID_EXTENSIONS.includes(ext);
+  }
+
+  function formatFileSize(bytes: number): string {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
+  function handleFile(file: File) {
+    if (!isValidVideo(file)) {
+      alert('Please select a valid video file (MP4, WebM, MOV, AVI, or MKV)');
+      return;
+    }
+
+    selectedFile = file;
+    fileName.textContent = file.name;
+    fileSize.textContent = formatFileSize(file.size);
+
+    dropZone.classList.add('hidden');
+    fileInfo.classList.remove('hidden');
+
+    // Dispatch custom event for parent components
+    window.dispatchEvent(new CustomEvent('fileSelected', { detail: { file } }));
+  }
+
+  function clearSelection() {
+    selectedFile = null;
+    fileInput.value = '';
+    dropZone.classList.remove('hidden');
+    fileInfo.classList.add('hidden');
+
+    // Dispatch custom event
+    window.dispatchEvent(new CustomEvent('fileCleared'));
+  }
+
+  // Click to browse
+  dropZone.addEventListener('click', () => fileInput.click());
+
+  // File input change
+  fileInput.addEventListener('change', () => {
+    const file = fileInput.files?.[0];
+    if (file) handleFile(file);
+  });
+
+  // Clear button
+  clearFile.addEventListener('click', clearSelection);
+
+  // Drag and drop handlers
+  dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('border-blue-500', 'bg-blue-500/10');
+  });
+
+  dropZone.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('border-blue-500', 'bg-blue-500/10');
+  });
+
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('border-blue-500', 'bg-blue-500/10');
+
+    const file = e.dataTransfer?.files[0];
+    if (file) handleFile(file);
+  });
+
+  // Expose selected file getter for other scripts
+  (window as any).getSelectedFile = () => selectedFile;
+</script>

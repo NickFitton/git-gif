@@ -1,5 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import DropZone from '../components/DropZone.astro';
 ---
 
 <Layout title="Git Gif - Video to GIF Converter">
@@ -12,7 +13,7 @@ import Layout from '../layouts/Layout.astro';
     <div id="app" class="space-y-6">
       <!-- Drop Zone -->
       <div id="drop-zone-container">
-        <!-- DropZone component will be inserted here -->
+        <DropZone />
       </div>
 
       <!-- Settings Panel (hidden until file selected) -->

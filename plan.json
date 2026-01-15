@@ -61,7 +61,7 @@
       ]
     },
     {
-      "complete": false,
+      "complete": true,
       "step": 6,
       "title": "Create Drag-and-Drop Component",
       "tasks": [
