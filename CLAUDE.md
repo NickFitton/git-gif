@@ -25,3 +25,10 @@ pnpm preview          # Preview production build locally
 - FFmpeg libraries are downloaded at build time (not installed as npm dependencies)
 - Assets served from `/assets/` include: ffmpeg, util, core, and core-mt packages
 - Transcoding happens client-side using the FFmpeg class with configurable width and framerate
+
+## Objective
+
+Read the plan.json file.
+Determine the next step to complete (the first step that doesn't have "complete" set to true).
+Action that step.
+Test it works by visiting the site in the browser.
