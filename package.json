@@ -4,16 +4,20 @@
   "version": "0.0.1",
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
-    "preview": "astro preview"
+    "build": "pnpm download:ffmpeg && astro build",
+    "preview": "astro preview",
+    "download:ffmpeg": "tsx scripts/download-ffmpeg.ts"
   },
   "dependencies": {
     "@astrojs/vercel": "^7.8.0",
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/util": "^0.12.1",
     "astro": "^4.16.0"
   },
   "devDependencies": {
     "@astrojs/tailwind": "^5.1.0",
     "tailwindcss": "^3.4.0",
+    "tsx": "^4.19.0",
     "typescript": "^5.0.0"
   }
 }

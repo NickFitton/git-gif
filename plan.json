@@ -29,7 +29,7 @@
       ]
     },
     {
-      "complete": false,
+      "complete": true,
       "step": 3,
       "title": "Set Up FFmpeg Asset Download Script",
       "tasks": [
