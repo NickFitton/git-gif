@@ -3,84 +3,37 @@ import Layout from '../layouts/Layout.astro';
 ---
 
 <Layout title="Git Gif - Video to GIF Converter">
-  <main class="container mx-auto px-4 py-8">
-    <header class="text-center mb-12">
+  <main class="container mx-auto px-4 py-8 max-w-3xl">
+    <header class="text-center mb-8">
       <h1 class="text-4xl font-bold mb-2">Git Gif</h1>
       <p class="text-gray-400">Convert videos to GIFs optimized for GitHub</p>
     </header>
 
-    <div class="max-w-2xl mx-auto">
-      <div class="bg-gray-800 rounded-lg p-8">
-        <h2 class="text-xl font-semibold mb-4 text-center">FFmpeg Assets Status</h2>
-        <div id="ffmpeg-status" class="space-y-2">
-          <p class="text-gray-400">Checking assets...</p>
-        </div>
+    <div id="app" class="space-y-6">
+      <!-- Drop Zone -->
+      <div id="drop-zone-container">
+        <!-- DropZone component will be inserted here -->
+      </div>
+
+      <!-- Settings Panel (hidden until file selected) -->
+      <div id="settings-container" class="hidden">
+        <!-- Settings component will be inserted here -->
+      </div>
+
+      <!-- Progress (hidden until converting) -->
+      <div id="progress-container" class="hidden">
+        <!-- Progress component will be inserted here -->
+      </div>
+
+      <!-- Preview/Download (hidden until complete) -->
+      <div id="preview-container" class="hidden">
+        <!-- Preview component will be inserted here -->
       </div>
     </div>
+
+    <footer class="text-center mt-12 text-gray-500 text-sm">
+      <p>Runs entirely in your browser using FFmpeg.wasm</p>
+      <p class="mt-1">No uploads, no server-side processing</p>
+    </footer>
   </main>
 </Layout>
-
-<script>
-  const statusEl = document.getElementById('ffmpeg-status');
-
-  interface AssetCheck {
-    name: string;
-    path: string;
-    expectedSize?: string;
-  }
-
-  const assets: AssetCheck[] = [
-    { name: 'FFmpeg Core JS', path: '/assets/ffmpeg-core.js', expectedSize: '~111KB' },
-    { name: 'FFmpeg Core WASM', path: '/assets/ffmpeg-core.wasm', expectedSize: '~30MB' },
-    { name: 'FFmpeg UMD Bundle', path: '/assets/ffmpeg.js', expectedSize: '~4KB' },
-    { name: 'FFmpeg Util', path: '/assets/ffmpeg-util.js', expectedSize: '~3KB' },
-  ];
-
-  async function checkAssets() {
-    if (!statusEl) return;
-
-    const results: string[] = [];
-    let allOk = true;
-
-    for (const asset of assets) {
-      try {
-        const response = await fetch(asset.path, { method: 'HEAD' });
-        const size = response.headers.get('content-length');
-        const sizeStr = size ? `${(parseInt(size) / 1024).toFixed(1)}KB` : 'unknown';
-
-        if (response.ok) {
-          results.push(`
-            <div class="flex items-center justify-between py-2 border-b border-gray-700">
-              <span class="text-gray-300">${asset.name}</span>
-              <span class="text-green-400">${sizeStr}</span>
-            </div>
-          `);
-        } else {
-          allOk = false;
-          results.push(`
-            <div class="flex items-center justify-between py-2 border-b border-gray-700">
-              <span class="text-gray-300">${asset.name}</span>
-              <span class="text-red-400">Not Found</span>
-            </div>
-          `);
-        }
-      } catch (error) {
-        allOk = false;
-        results.push(`
-          <div class="flex items-center justify-between py-2 border-b border-gray-700">
-            <span class="text-gray-300">${asset.name}</span>
-            <span class="text-red-400">Error</span>
-          </div>
-        `);
-      }
-    }
-
-    const statusBanner = allOk
-      ? '<div class="bg-green-900/30 border border-green-700 rounded p-3 mb-4 text-center"><span class="text-green-400 font-bold">All FFmpeg assets loaded successfully!</span></div>'
-      : '<div class="bg-red-900/30 border border-red-700 rounded p-3 mb-4 text-center"><span class="text-red-400 font-bold">Some assets failed to load</span></div>';
-
-    statusEl.innerHTML = statusBanner + results.join('');
-  }
-
-  checkAssets();
-</script>

@@ -40,7 +40,7 @@
       ]
     },
     {
-      "complete": false,
+      "complete": true,
       "step": 4,
       "title": "Create FFmpeg Service",
       "tasks": [
@@ -51,7 +51,7 @@
       ]
     },
     {
-      "complete": false,
+      "complete": true,
       "step": 5,
       "title": "Build Main Page Layout",
       "tasks": [
