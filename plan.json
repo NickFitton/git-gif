@@ -72,7 +72,7 @@
       ]
     },
     {
-      "complete": false,
+      "complete": true,
       "step": 7,
       "title": "Create Settings Panel",
       "tasks": [
@@ -83,7 +83,7 @@
       ]
     },
     {
-      "complete": false,
+      "complete": true,
       "step": 8,
       "title": "Create Progress Component",
       "tasks": [

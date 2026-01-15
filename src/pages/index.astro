@@ -1,6 +1,8 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import DropZone from '../components/DropZone.astro';
+import Settings from '../components/Settings.astro';
+import Progress from '../components/Progress.astro';
 ---
 
 <Layout title="Git Gif - Video to GIF Converter">
@@ -18,12 +20,12 @@ import DropZone from '../components/DropZone.astro';
 
       <!-- Settings Panel (hidden until file selected) -->
       <div id="settings-container" class="hidden">
-        <!-- Settings component will be inserted here -->
+        <Settings />
       </div>
 
       <!-- Progress (hidden until converting) -->
       <div id="progress-container" class="hidden">
-        <!-- Progress component will be inserted here -->
+        <Progress />
       </div>
 
       <!-- Preview/Download (hidden until complete) -->
