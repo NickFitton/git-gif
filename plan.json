@@ -19,7 +19,7 @@
       ]
     },
     {
-      "complete": false,
+      "complete": true,
       "step": 2,
       "title": "Configure Vercel Deployment",
       "tasks": [
@@ -116,7 +116,7 @@
       ]
     },
     {
-      "complete": false,
+      "complete": true,
       "step": 11,
       "title": "Add Vercel Configuration",
       "tasks": [
