@@ -1,0 +1,93 @@
+---
+// Preview component for showing converted GIF and download option
+---
+
+<div class="bg-gray-800 rounded-lg p-6">
+  <h2 class="text-lg font-medium mb-4">Your GIF is ready!</h2>
+
+  <!-- GIF Preview -->
+  <div class="flex justify-center mb-4">
+    <img
+      id="gif-preview"
+      src=""
+      alt="Converted GIF"
+      class="max-w-full rounded-lg border border-gray-700"
+    />
+  </div>
+
+  <!-- File Info -->
+  <div class="flex justify-center gap-6 text-sm text-gray-400 mb-6">
+    <span id="gif-dimensions"></span>
+    <span id="gif-size"></span>
+  </div>
+
+  <!-- Action Buttons -->
+  <div class="flex gap-3">
+    <a
+      id="download-btn"
+      href=""
+      download="converted.gif"
+      class="flex-1 py-3 px-4 bg-green-600 hover:bg-green-700 rounded-lg font-medium text-center transition-colors"
+    >
+      Download GIF
+    </a>
+    <button
+      id="convert-another-btn"
+      class="flex-1 py-3 px-4 bg-gray-700 hover:bg-gray-600 rounded-lg font-medium transition-colors"
+    >
+      Convert Another
+    </button>
+  </div>
+</div>
+
+<script>
+  const gifPreview = document.getElementById('gif-preview') as HTMLImageElement;
+  const gifDimensions = document.getElementById('gif-dimensions') as HTMLSpanElement;
+  const gifSize = document.getElementById('gif-size') as HTMLSpanElement;
+  const downloadBtn = document.getElementById('download-btn') as HTMLAnchorElement;
+  const convertAnotherBtn = document.getElementById('convert-another-btn') as HTMLButtonElement;
+
+  interface GifResult {
+    url: string;
+    size: number;
+    filename?: string;
+  }
+
+  function formatFileSize(bytes: number): string {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+  }
+
+  function showPreview(result: GifResult) {
+    // Set preview image
+    gifPreview.src = result.url;
+
+    // Update download link
+    downloadBtn.href = result.url;
+    if (result.filename) {
+      downloadBtn.download = result.filename;
+    }
+
+    // Show file size
+    gifSize.textContent = formatFileSize(result.size);
+
+    // Get dimensions once image loads
+    gifPreview.onload = () => {
+      gifDimensions.textContent = `${gifPreview.naturalWidth} × ${gifPreview.naturalHeight}`;
+    };
+  }
+
+  // Listen for conversion complete event
+  window.addEventListener('conversionComplete', ((e: CustomEvent<GifResult>) => {
+    showPreview(e.detail);
+  }) as EventListener);
+
+  // Convert another button
+  convertAnotherBtn.addEventListener('click', () => {
+    window.dispatchEvent(new CustomEvent('resetConverter'));
+  });
+
+  // Expose show function for direct calls
+  (window as any).showGifPreview = showPreview;
+</script>

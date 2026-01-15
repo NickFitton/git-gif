@@ -94,7 +94,7 @@
       ]
     },
     {
-      "complete": false,
+      "complete": true,
       "step": 9,
       "title": "Create Preview/Download Component",
       "tasks": [
