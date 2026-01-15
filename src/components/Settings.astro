@@ -1,0 +1,121 @@
+---
+// Settings component for GIF conversion options
+---
+
+<div class="bg-gray-800 rounded-lg p-6">
+  <h2 class="text-lg font-medium mb-4">Output Settings</h2>
+
+  <div class="space-y-6">
+    <!-- Width Setting -->
+    <div>
+      <label for="width-input" class="block text-sm font-medium text-gray-300 mb-2">
+        Width (px)
+      </label>
+      <div class="flex items-center gap-4">
+        <input
+          type="range"
+          id="width-slider"
+          min="240"
+          max="800"
+          value="480"
+          step="40"
+          class="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
+        />
+        <input
+          type="number"
+          id="width-input"
+          min="240"
+          max="800"
+          value="480"
+          step="40"
+          class="w-20 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-center text-sm focus:outline-none focus:border-blue-500"
+        />
+      </div>
+      <p class="text-xs text-gray-500 mt-1">Recommended: 480px for GitHub</p>
+    </div>
+
+    <!-- Framerate Setting -->
+    <div>
+      <label for="fps-input" class="block text-sm font-medium text-gray-300 mb-2">
+        Framerate (fps)
+      </label>
+      <div class="flex items-center gap-4">
+        <input
+          type="range"
+          id="fps-slider"
+          min="5"
+          max="30"
+          value="10"
+          step="1"
+          class="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
+        />
+        <input
+          type="number"
+          id="fps-input"
+          min="5"
+          max="30"
+          value="10"
+          step="1"
+          class="w-20 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-center text-sm focus:outline-none focus:border-blue-500"
+        />
+      </div>
+      <p class="text-xs text-gray-500 mt-1">Lower = smaller file, higher = smoother</p>
+    </div>
+  </div>
+
+  <!-- Convert Button -->
+  <button
+    id="convert-btn"
+    class="w-full mt-6 py-3 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg font-medium transition-colors"
+  >
+    Convert to GIF
+  </button>
+</div>
+
+<script>
+  const widthSlider = document.getElementById('width-slider') as HTMLInputElement;
+  const widthInput = document.getElementById('width-input') as HTMLInputElement;
+  const fpsSlider = document.getElementById('fps-slider') as HTMLInputElement;
+  const fpsInput = document.getElementById('fps-input') as HTMLInputElement;
+  const convertBtn = document.getElementById('convert-btn') as HTMLButtonElement;
+
+  // Sync width slider and input
+  widthSlider.addEventListener('input', () => {
+    widthInput.value = widthSlider.value;
+  });
+
+  widthInput.addEventListener('change', () => {
+    let value = parseInt(widthInput.value);
+    value = Math.max(240, Math.min(800, value));
+    widthInput.value = String(value);
+    widthSlider.value = String(value);
+  });
+
+  // Sync fps slider and input
+  fpsSlider.addEventListener('input', () => {
+    fpsInput.value = fpsSlider.value;
+  });
+
+  fpsInput.addEventListener('change', () => {
+    let value = parseInt(fpsInput.value);
+    value = Math.max(5, Math.min(30, value));
+    fpsInput.value = String(value);
+    fpsSlider.value = String(value);
+  });
+
+  // Convert button click
+  convertBtn.addEventListener('click', () => {
+    const width = parseInt(widthInput.value);
+    const fps = parseInt(fpsInput.value);
+
+    window.dispatchEvent(new CustomEvent('convertStart', {
+      detail: { width, fps }
+    }));
+  });
+
+  // Expose settings getter for other scripts
+  (window as any).getSettings = () => ({
+    width: parseInt(widthInput.value),
+    fps: parseInt(fpsInput.value)
+  });
+</script>

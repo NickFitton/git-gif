@@ -1,0 +1,77 @@
+---
+// Progress component for showing conversion status
+---
+
+<div class="bg-gray-800 rounded-lg p-6">
+  <h2 class="text-lg font-medium mb-4">Converting...</h2>
+
+  <!-- Progress Bar -->
+  <div class="relative h-4 bg-gray-700 rounded-full overflow-hidden mb-3">
+    <div
+      id="progress-bar"
+      class="absolute inset-y-0 left-0 bg-blue-500 transition-all duration-300 ease-out"
+      style="width: 0%"
+    ></div>
+  </div>
+
+  <!-- Progress Info -->
+  <div class="flex justify-between text-sm">
+    <span id="progress-message" class="text-gray-300">Initializing...</span>
+    <span id="progress-percent" class="text-gray-400">0%</span>
+  </div>
+
+  <!-- Stage Indicator -->
+  <div id="stage-indicator" class="mt-4 flex items-center gap-2">
+    <div class="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+    <span id="stage-text" class="text-sm text-gray-400">Loading FFmpeg...</span>
+  </div>
+</div>
+
+<script>
+  const progressBar = document.getElementById('progress-bar') as HTMLDivElement;
+  const progressMessage = document.getElementById('progress-message') as HTMLSpanElement;
+  const progressPercent = document.getElementById('progress-percent') as HTMLSpanElement;
+  const stageText = document.getElementById('stage-text') as HTMLSpanElement;
+
+  interface ProgressUpdate {
+    stage: 'loading' | 'processing' | 'complete';
+    progress: number;
+    message: string;
+  }
+
+  function updateProgress(data: ProgressUpdate) {
+    const { stage, progress, message } = data;
+
+    // Update progress bar
+    progressBar.style.width = `${progress}%`;
+    progressPercent.textContent = `${progress}%`;
+    progressMessage.textContent = message;
+
+    // Update stage text
+    switch (stage) {
+      case 'loading':
+        stageText.textContent = 'Loading FFmpeg...';
+        break;
+      case 'processing':
+        stageText.textContent = 'Processing video...';
+        break;
+      case 'complete':
+        stageText.textContent = 'Complete!';
+        break;
+    }
+
+    // Change bar color on complete
+    if (stage === 'complete') {
+      progressBar.classList.remove('bg-blue-500');
+      progressBar.classList.add('bg-green-500');
+    }
+  }
+
+  // Listen for progress updates from main app
+  window.addEventListener('conversionProgress', ((e: CustomEvent<ProgressUpdate>) => {
+    updateProgress(e.detail);
+  }) as EventListener);
+
+  // Expose update function for direct calls
+  (window as any).updateConversionProgress = updateProgress;
+</script>

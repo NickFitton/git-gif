@@ -1,185 +1,185 @@
 ---
-import Layout from "../layouts/Layout.astro";
+import Layout from '../layouts/Layout.astro';
+import DropZone from '../components/DropZone.astro';
+import Settings from '../components/Settings.astro';
+import Progress from '../components/Progress.astro';
+import Preview from '../components/Preview.astro';
 ---
 
-<Layout title="Welcome to Astro.">
-  <head>
-    <script is:inline src="/assets/ffmpeg/package/dist/umd/ffmpeg.js"></script>
-    <script is:inline src="/assets/util/package/dist/umd/index.js"></script>
-  </head>
-  <main>
-    <header>
-      <h1>Git Gif</h1>
-      <p>
-        Submit a video to convert it to a gif ready for you to upload to GitHub.
-      </p>
+<Layout title="Git Gif - Video to GIF Converter">
+  <main class="container mx-auto px-4 py-8 max-w-3xl">
+    <header class="text-center mb-8">
+      <h1 class="text-4xl font-bold mb-2">Git Gif</h1>
+      <p class="text-gray-400">Convert videos to GIFs optimized for GitHub</p>
     </header>
-    <section>
-      <h2>Options</h2>
-      <div class="sliders">
-        <label for="width"> Output width </label>
-        <input
-          id="width"
-          type="range"
-          min="100"
-          max="1080"
-          value="800"
-          step="20"
-        />
-        <span id="widthOutput"></span>
-        <label for="framerate"> Output framerate </label>
-        <input
-          id="framerate"
-          type="range"
-          min="10"
-          max="30"
-          value="22"
-          step="1"
-        />
-        <span id="framerateOutput"></span>
+
+    <div id="app" class="space-y-6">
+      <!-- Drop Zone -->
+      <div id="drop-zone-container">
+        <DropZone />
       </div>
-    </section>
-    <section>
-      <h2>Upload</h2>
-      <div id="upload-area">
-        <p>Drag a video file here for it to be processed.</p>
-        <input type="file" id="uploader" />
+
+      <!-- Settings Panel (hidden until file selected) -->
+      <div id="settings-container" class="hidden">
+        <Settings />
       </div>
-      <div class="hide" id="progress-message">
-        <p id="message">We're just warming up the converter</p>
-        <label for="file">Conversion:</label>
-        <progress id="file" value="0" max="100">0%</progress>
+
+      <!-- Progress (hidden until converting) -->
+      <div id="progress-container" class="hidden">
+        <Progress />
       </div>
-    </section>
+
+      <!-- Preview/Download (hidden until complete) -->
+      <div id="preview-container" class="hidden">
+        <Preview />
+      </div>
+
+      <!-- Error Display -->
+      <div id="error-container" class="hidden">
+        <div class="bg-red-900/30 border border-red-700 rounded-lg p-4">
+          <p class="text-red-400 font-medium">Conversion failed</p>
+          <p id="error-message" class="text-red-300 text-sm mt-1"></p>
+          <button id="error-dismiss" class="mt-3 text-sm text-red-400 hover:text-red-300 underline">
+            Try again
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <footer class="text-center mt-12 text-gray-500 text-sm">
+      <p>Runs entirely in your browser using FFmpeg.wasm</p>
+      <p class="mt-1">No uploads, no server-side processing</p>
+    </footer>
   </main>
-  <dialog id="output">
-    <h2>Here's your gif!</h2>
-    <img id="output-img" />
-  </dialog>
 </Layout>
 
-<style>
-  main {
-    padding: 1rem;
-    margin: auto;
-    width: 800px;
-    max-width: calc(100% - 2rem);
-    color: white;
-    font-size: 20px;
-    line-height: 1.6;
-    display: flex;
-    flex-direction: column;
-  }
+<script>
+  import { ffmpegService } from '../lib/ffmpeg';
+  import type { ConversionProgress } from '../lib/ffmpeg';
 
-  section {
-    border: 1px white solid;
-    padding: 2rem;
-    h2 {
-      text-align: center;
-      margin: 0 2rem;
-    }
-    &:first-of-type {
-      border-radius: 1rem 1rem 0 0;
-    }
-    &:last-of-type {
-      border-radius: 0 0 1rem 1rem;
-    }
-  }
-  .content {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    height: 100%;
-    section {
-      height: 100%;
-    }
-  }
+  // Container elements
+  const dropZoneContainer = document.getElementById('drop-zone-container')!;
+  const settingsContainer = document.getElementById('settings-container')!;
+  const progressContainer = document.getElementById('progress-container')!;
+  const previewContainer = document.getElementById('preview-container')!;
+  const errorContainer = document.getElementById('error-container')!;
+  const errorMessage = document.getElementById('error-message')!;
+  const errorDismiss = document.getElementById('error-dismiss')!;
 
-  .sliders {
-    display: grid;
-    grid-template-columns: auto 4fr 1fr;
-    align-items: center;
-    gap: 0.5rem;
-    span {
-      text-align: end;
-    }
-  }
-  dialog {
-    border-radius: 2rem;
-    flex-direction: column;
-    max-width: calc(100% - 8rem);
-    img {
-      max-width: 100%;
+  // App state
+  type AppState = 'idle' | 'file-selected' | 'converting' | 'complete' | 'error';
+  let currentState: AppState = 'idle';
+  let selectedFile: File | null = null;
+
+  function setState(newState: AppState) {
+    currentState = newState;
+
+    // Hide all containers first
+    dropZoneContainer.classList.add('hidden');
+    settingsContainer.classList.add('hidden');
+    progressContainer.classList.add('hidden');
+    previewContainer.classList.add('hidden');
+    errorContainer.classList.add('hidden');
+
+    // Show appropriate containers based on state
+    switch (newState) {
+      case 'idle':
+        dropZoneContainer.classList.remove('hidden');
+        break;
+      case 'file-selected':
+        dropZoneContainer.classList.remove('hidden');
+        settingsContainer.classList.remove('hidden');
+        break;
+      case 'converting':
+        progressContainer.classList.remove('hidden');
+        break;
+      case 'complete':
+        previewContainer.classList.remove('hidden');
+        break;
+      case 'error':
+        dropZoneContainer.classList.remove('hidden');
+        errorContainer.classList.remove('hidden');
+        break;
     }
   }
 
-  .hide {
-    display: none;
-  }
-</style>
-<script type="module" is:inline>
-  import { FFmpeg } from "/assets/ffmpeg/package/dist/esm/index.js";
-  import { fetchFile } from "/assets/util/package/dist/esm/index.js";
-  const attachValueToText = (textId, inputId) => {
-    const widthOutput = document.querySelector(textId);
-    const widthInput = document.querySelector(inputId);
-    widthOutput.textContent = widthInput.value;
-    widthInput.addEventListener("input", (event) => {
-      const target = event.target;
-      if ("value" in target && typeof target.value === "string") {
-        widthOutput.textContent = target.value;
-      }
-    });
-  };
+  // Handle file selection
+  window.addEventListener('fileSelected', ((e: CustomEvent<{ file: File }>) => {
+    selectedFile = e.detail.file;
+    setState('file-selected');
+  }) as EventListener);
 
-  attachValueToText("#widthOutput", "#width");
-  attachValueToText("#framerateOutput", "#framerate");
+  // Handle file cleared
+  window.addEventListener('fileCleared', () => {
+    selectedFile = null;
+    setState('idle');
+  });
 
-  let ffmpeg = null;
+  // Handle convert start
+  window.addEventListener('convertStart', (async (e: CustomEvent<{ width: number; fps: number }>) => {
+    if (!selectedFile) return;
 
-  const transcode = async ({ target: { files } }) => {
-    const width = document.getElementById("width").value;
-    const framerate = document.getElementById("framerate").value;
-    const message = document.getElementById("message");
-    const progressBar = document.getElementById("file");
-    const progressMessage = document.getElementById("progress-message");
-    const uploadArea = document.getElementById("upload-area");
-    if (ffmpeg === null) {
-      ffmpeg = new FFmpeg();
-      ffmpeg.on("log", ({ message }) => {
-        console.log(message);
-      });
-      ffmpeg.on("progress", ({ progress }) => {
-        message.innerHTML = `${progress * 100} %`;
-        progressBar.value = progress * 100;
-        progressBar.innerHTML = `${progress * 100} %`;
-      });
-      await ffmpeg.load({
-        coreURL: "/assets/core/package/dist/esm/ffmpeg-core.js",
-      });
+    const { width, fps } = e.detail;
+    setState('converting');
+
+    try {
+      // Progress callback
+      const onProgress = (progress: ConversionProgress) => {
+        window.dispatchEvent(new CustomEvent('conversionProgress', { detail: progress }));
+      };
+
+      // Run conversion
+      const result = await ffmpegService.convertToGif(selectedFile, { width, fps }, onProgress);
+
+      // Generate filename from original
+      const baseName = selectedFile.name.replace(/\.[^/.]+$/, '');
+      const filename = `${baseName}.gif`;
+
+      // Show preview
+      window.dispatchEvent(new CustomEvent('conversionComplete', {
+        detail: {
+          url: result.url,
+          size: result.size,
+          filename
+        }
+      }));
+
+      setState('complete');
+    } catch (error) {
+      console.error('Conversion failed:', error);
+      errorMessage.textContent = error instanceof Error ? error.message : 'Unknown error occurred';
+      setState('error');
     }
-    const { name } = files[0];
-    await ffmpeg.writeFile(name, await fetchFile(files[0]));
-    progressMessage.classList.remove("hide");
-    uploadArea.classList.add("hide");
-    await ffmpeg.exec([
-      "-i",
-      name,
-      "-vf",
-      `fps=${framerate},scale=${width}:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse`,
-      "output.gif",
-    ]);
-    message.innerHTML = "Complete transcoding";
-    progressMessage.classList.add("hide");
-    uploadArea.classList.remove("hide");
-    const data = await ffmpeg.readFile("output.gif");
+  }) as EventListener);
 
-    const image = document.getElementById("output-img");
-    image.src = URL.createObjectURL(
-      new Blob([data.buffer], { type: "image/gif" })
-    );
-    const modal = document.getElementById("output");
-    modal.showModal();
-  };
-  const elm = document.getElementById("uploader");
-  elm.addEventListener("change", transcode);
+  // Handle reset
+  window.addEventListener('resetConverter', () => {
+    selectedFile = null;
+    // Reset the drop zone UI
+    const dropZone = document.getElementById('drop-zone');
+    const fileInfo = document.getElementById('file-info');
+    const fileInput = document.getElementById('file-input') as HTMLInputElement;
+
+    if (dropZone) dropZone.classList.remove('hidden');
+    if (fileInfo) fileInfo.classList.add('hidden');
+    if (fileInput) fileInput.value = '';
+
+    // Reset progress bar
+    const progressBar = document.getElementById('progress-bar');
+    if (progressBar) {
+      progressBar.style.width = '0%';
+      progressBar.classList.remove('bg-green-500');
+      progressBar.classList.add('bg-blue-500');
+    }
+
+    setState('idle');
+  });
+
+  // Error dismiss
+  errorDismiss.addEventListener('click', () => {
+    setState('idle');
+  });
+
+  // Initialize
+  setState('idle');
 </script>
