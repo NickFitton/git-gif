@@ -9,7 +9,7 @@
   },
   "steps": [
     {
-      "complete": false,
+      "complete": true,
       "step": 1,
       "title": "Initialize Astro Project",
       "tasks": [
