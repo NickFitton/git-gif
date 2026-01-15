@@ -21,13 +21,13 @@ const FFMPEG_CORE_FILES = [
     url: 'https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/index.js',
     dest: 'ffmpeg-util.js',
   },
-  // Single-threaded core
+  // Single-threaded core (UMD version for browser compatibility)
   {
-    url: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm/ffmpeg-core.js',
+    url: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js',
     dest: 'ffmpeg-core.js',
   },
   {
-    url: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm/ffmpeg-core.wasm',
+    url: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm',
     dest: 'ffmpeg-core.wasm',
   },
   // Multi-threaded core

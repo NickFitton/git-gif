@@ -35,9 +35,151 @@ import Preview from '../components/Preview.astro';
       </div>
     </div>
 
+    <!-- Error Display -->
+    <div id="error-container" class="hidden">
+      <div class="bg-red-900/30 border border-red-700 rounded-lg p-4">
+        <p class="text-red-400 font-medium">Conversion failed</p>
+        <p id="error-message" class="text-red-300 text-sm mt-1"></p>
+        <button id="error-dismiss" class="mt-3 text-sm text-red-400 hover:text-red-300 underline">
+          Try again
+        </button>
+      </div>
+    </div>
+
     <footer class="text-center mt-12 text-gray-500 text-sm">
       <p>Runs entirely in your browser using FFmpeg.wasm</p>
       <p class="mt-1">No uploads, no server-side processing</p>
     </footer>
   </main>
 </Layout>
+
+<script>
+  import { ffmpegService } from '../lib/ffmpeg';
+  import type { ConversionProgress } from '../lib/ffmpeg';
+
+  // Container elements
+  const dropZoneContainer = document.getElementById('drop-zone-container')!;
+  const settingsContainer = document.getElementById('settings-container')!;
+  const progressContainer = document.getElementById('progress-container')!;
+  const previewContainer = document.getElementById('preview-container')!;
+  const errorContainer = document.getElementById('error-container')!;
+  const errorMessage = document.getElementById('error-message')!;
+  const errorDismiss = document.getElementById('error-dismiss')!;
+
+  // App state
+  type AppState = 'idle' | 'file-selected' | 'converting' | 'complete' | 'error';
+  let currentState: AppState = 'idle';
+  let selectedFile: File | null = null;
+
+  function setState(newState: AppState) {
+    currentState = newState;
+
+    // Hide all containers first
+    dropZoneContainer.classList.add('hidden');
+    settingsContainer.classList.add('hidden');
+    progressContainer.classList.add('hidden');
+    previewContainer.classList.add('hidden');
+    errorContainer.classList.add('hidden');
+
+    // Show appropriate containers based on state
+    switch (newState) {
+      case 'idle':
+        dropZoneContainer.classList.remove('hidden');
+        break;
+      case 'file-selected':
+        dropZoneContainer.classList.remove('hidden');
+        settingsContainer.classList.remove('hidden');
+        break;
+      case 'converting':
+        progressContainer.classList.remove('hidden');
+        break;
+      case 'complete':
+        previewContainer.classList.remove('hidden');
+        break;
+      case 'error':
+        dropZoneContainer.classList.remove('hidden');
+        errorContainer.classList.remove('hidden');
+        break;
+    }
+  }
+
+  // Handle file selection
+  window.addEventListener('fileSelected', ((e: CustomEvent<{ file: File }>) => {
+    selectedFile = e.detail.file;
+    setState('file-selected');
+  }) as EventListener);
+
+  // Handle file cleared
+  window.addEventListener('fileCleared', () => {
+    selectedFile = null;
+    setState('idle');
+  });
+
+  // Handle convert start
+  window.addEventListener('convertStart', (async (e: CustomEvent<{ width: number; fps: number }>) => {
+    if (!selectedFile) return;
+
+    const { width, fps } = e.detail;
+    setState('converting');
+
+    try {
+      // Progress callback
+      const onProgress = (progress: ConversionProgress) => {
+        window.dispatchEvent(new CustomEvent('conversionProgress', { detail: progress }));
+      };
+
+      // Run conversion
+      const result = await ffmpegService.convertToGif(selectedFile, { width, fps }, onProgress);
+
+      // Generate filename from original
+      const baseName = selectedFile.name.replace(/\.[^/.]+$/, '');
+      const filename = `${baseName}.gif`;
+
+      // Show preview
+      window.dispatchEvent(new CustomEvent('conversionComplete', {
+        detail: {
+          url: result.url,
+          size: result.size,
+          filename
+        }
+      }));
+
+      setState('complete');
+    } catch (error) {
+      console.error('Conversion failed:', error);
+      errorMessage.textContent = error instanceof Error ? error.message : 'Unknown error occurred';
+      setState('error');
+    }
+  }) as EventListener);
+
+  // Handle reset
+  window.addEventListener('resetConverter', () => {
+    selectedFile = null;
+    // Reset the drop zone UI
+    const dropZone = document.getElementById('drop-zone');
+    const fileInfo = document.getElementById('file-info');
+    const fileInput = document.getElementById('file-input') as HTMLInputElement;
+
+    if (dropZone) dropZone.classList.remove('hidden');
+    if (fileInfo) fileInfo.classList.add('hidden');
+    if (fileInput) fileInput.value = '';
+
+    // Reset progress bar
+    const progressBar = document.getElementById('progress-bar');
+    if (progressBar) {
+      progressBar.style.width = '0%';
+      progressBar.classList.remove('bg-green-500');
+      progressBar.classList.add('bg-blue-500');
+    }
+
+    setState('idle');
+  });
+
+  // Error dismiss
+  errorDismiss.addEventListener('click', () => {
+    setState('idle');
+  });
+
+  // Initialize
+  setState('idle');
+</script>

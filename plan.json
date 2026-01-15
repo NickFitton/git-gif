@@ -105,7 +105,7 @@
       ]
     },
     {
-      "complete": false,
+      "complete": true,
       "step": 10,
       "title": "Wire Up Main Application Logic",
       "tasks": [

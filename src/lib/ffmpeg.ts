@@ -1,5 +1,25 @@
-import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile } from '@ffmpeg/util';
+
+// Use dynamically loaded FFmpeg from UMD bundle to avoid worker resolution issues
+declare global {
+  interface Window {
+    FFmpegWASM: {
+      FFmpeg: new () => FFmpegInstance;
+    };
+  }
+}
+
+interface FFmpegInstance {
+  loaded: boolean;
+  on(event: 'log', callback: (data: { message: string }) => void): void;
+  on(event: 'progress', callback: (data: { progress: number }) => void): void;
+  load(options: { coreURL: string; wasmURL: string }): Promise<void>;
+  exec(args: string[]): Promise<number>;
+  writeFile(path: string, data: Uint8Array | string): Promise<void>;
+  readFile(path: string): Promise<Uint8Array>;
+  deleteFile(path: string): Promise<void>;
+  terminate(): void;
+}
 
 export interface ConversionOptions {
   width?: number;
@@ -24,9 +44,19 @@ const DEFAULT_WIDTH = 480;
 const DEFAULT_FPS = 10;
 
 class FFmpegService {
-  private ffmpeg: FFmpeg | null = null;
+  private ffmpeg: FFmpegInstance | null = null;
   private loaded = false;
   private loading = false;
+
+  private async loadScript(src: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = src;
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error(`Failed to load script: ${src}`));
+      document.head.appendChild(script);
+    });
+  }
 
   async load(onProgress?: ProgressCallback): Promise<void> {
     if (this.loaded) return;
@@ -46,32 +76,53 @@ class FFmpegService {
     });
 
     try {
-      this.ffmpeg = new FFmpeg();
+      const baseURL = window.location.origin + '/assets';
+      console.log('[FFmpeg] Loading from:', baseURL);
+      console.log('[FFmpeg] SharedArrayBuffer available:', typeof SharedArrayBuffer !== 'undefined');
+
+      // Load FFmpeg UMD bundle if not already loaded
+      if (!window.FFmpegWASM) {
+        console.log('[FFmpeg] Loading UMD bundle...');
+        await this.loadScript(`${baseURL}/ffmpeg.js`);
+        console.log('[FFmpeg] UMD bundle loaded');
+      }
+
+      this.ffmpeg = new window.FFmpegWASM.FFmpeg();
 
       // Listen for log messages
       this.ffmpeg.on('log', ({ message }) => {
-        console.log('[FFmpeg]', message);
+        console.log('[FFmpeg Log]', message);
       });
 
       onProgress?.({
         stage: 'loading',
-        progress: 50,
+        progress: 30,
         message: 'Loading FFmpeg core (30MB)...',
       });
 
-      const baseURL = window.location.origin + '/assets';
-
-      await this.ffmpeg.load({
+      const loadPromise = this.ffmpeg.load({
         coreURL: `${baseURL}/ffmpeg-core.js`,
         wasmURL: `${baseURL}/ffmpeg-core.wasm`,
       });
 
+      // Add timeout detection (not rejection, just logging)
+      const timeoutId = setTimeout(() => {
+        console.warn('[FFmpeg] Load taking longer than 30s - check console for errors');
+      }, 30000);
+
+      await loadPromise;
+      clearTimeout(timeoutId);
+
+      console.log('[FFmpeg] Load complete!');
       this.loaded = true;
       onProgress?.({
         stage: 'loading',
         progress: 100,
         message: 'FFmpeg ready',
       });
+    } catch (error) {
+      console.error('[FFmpeg] Load failed:', error);
+      throw error;
     } finally {
       this.loading = false;
     }
